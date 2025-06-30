@@ -49,47 +49,47 @@ A comprehensive cab booking system built with Java 21, Spring Boot microservices
 
 1. Clone the repository
 2. Run with Docker Compose:
-   \`\`\`bash
+   ```bash
    docker-compose up -d
-   \`\`\`
+   ```
 
 ### Manual Setup
 
 #### 1. Database Setup
-\`\`\`bash
+```bash
 mysql -u root -p < scripts/create-databases.sql
 mysql -u root -p < scripts/sample-data-microservices.sql
-\`\`\`
+```
 
 #### 2. Start Services (in order)
 
 1. **Eureka Server**
-   \`\`\`bash
+   ```bash
    cd eureka-server
    mvn spring-boot:run
-   \`\`\`
+   ```
 
 2. **API Gateway**
-   \`\`\`bash
+   ```bash
    cd api-gateway
    mvn spring-boot:run
-   \`\`\`
+   ```
 
 3. **Microservices** (can be started in parallel)
-   \`\`\`bash
+   ```bash
    cd user-service && mvn spring-boot:run &
    cd driver-service && mvn spring-boot:run &
    cd ride-service && mvn spring-boot:run &
    cd payment-service && mvn spring-boot:run &
    cd rating-service && mvn spring-boot:run &
-   \`\`\`
+   ```
 
 4. **Frontend**
-   \`\`\`bash
+   ```bash
    cd frontend
    npm install
    npm start
-   \`\`\`
+   ```
 
 ## Service URLs
 
@@ -161,20 +161,20 @@ All requests go through the API Gateway at `http://localhost:8080`
 ## Testing
 
 ### Unit Tests
-\`\`\`bash
+```bash
 # Test individual services
 cd user-service && mvn test
 cd driver-service && mvn test
 cd ride-service && mvn test
 cd payment-service && mvn test
 cd rating-service && mvn test
-\`\`\`
+```
 
 ### Integration Tests
-\`\`\`bash
+```bash
 # Test with all services running
 mvn verify
-\`\`\`
+```
 
 ## Monitoring
 
@@ -200,9 +200,9 @@ mvn verify
 ## Deployment
 
 ### Docker Deployment
-\`\`\`bash
+```bash
 docker-compose up -d
-\`\`\`
+```
 
 ### Kubernetes Deployment
 Kubernetes manifests available in `/k8s` directory (future enhancement)
@@ -219,19 +219,4 @@ Kubernetes manifests available in `/k8s` directory (future enhancement)
 ## License
 
 This project is licensed under the MIT License.
-\`\`\`
 
-This comprehensive microservices architecture provides:
-
-1. **Java 21 Support**: All services use the latest Java features
-2. **Spring Cloud Microservices**: Complete microservices ecosystem
-3. **Eureka Discovery**: Automatic service registration and discovery
-4. **API Gateway**: Single entry point with routing, load balancing, and circuit breakers
-5. **Inter-Service Communication**: Feign clients for service-to-service calls
-6. **Database Per Service**: Each microservice has its own MySQL database
-7. **TDD Approach**: Comprehensive test coverage with JUnit 5
-8. **Docker Support**: Easy deployment with Docker Compose
-9. **Monitoring**: Health checks and service monitoring
-10. **Fault Tolerance**: Circuit breakers and fallback mechanisms
-
-The system is production-ready with proper error handling, service discovery, load balancing, and fault tolerance mechanisms.
