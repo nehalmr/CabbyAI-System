@@ -6,9 +6,7 @@
     "build": "next build",
     "dev": "next dev",
     "lint": "next lint",
-    "start": "docker-compose up -d && next start",
-    "stop": "docker-compose down",
-    "setup": "pnpm install && mvn clean install -f ./api-gateway/pom.xml && mvn clean install -f ./user-service/pom.xml && mvn clean install -f ./driver-service/pom.xml && mvn clean install -f ./ride-service/pom.xml && mvn clean install -f ./payment-service/pom.xml && mvn clean install -f ./rating-service/pom.xml"
+    "start": "next start"
   },
   "dependencies": {
     "@hookform/resolvers": "^3.9.1",

@@ -10,31 +10,42 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long userId;
     
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     private String name;
     
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 100)
     private String email;
     
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private String phone;
     
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
     private String passwordHash;
     
     @Column(nullable = false)
     private LocalDateTime createdAt;
     
     @Column(nullable = false)
+    private LocalDateTime updatedAt;
+    
+    @Column(nullable = false)
     private boolean active = true;
     
-    // Constructors
-    public User() {
-        this.createdAt = LocalDateTime.now();
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
     
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+    
+    // Constructors
+    public User() {}
+    
     public User(String name, String email, String phone, String passwordHash) {
-        this();
         this.name = name;
         this.email = email;
         this.phone = phone;
@@ -59,6 +70,9 @@ public class User {
     
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
+    
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
     
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }

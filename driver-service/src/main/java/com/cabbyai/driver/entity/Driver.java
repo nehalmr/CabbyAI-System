@@ -10,16 +10,16 @@ public class Driver {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long driverId;
     
-    @Column(nullable = false)
+    @Column(nullable = false, length = 100)
     private String name;
     
-    @Column(nullable = false)
+    @Column(nullable = false, length = 20)
     private String phone;
     
-    @Column(nullable = false, unique = true)
+    @Column(nullable = false, unique = true, length = 50)
     private String licenseNumber;
     
-    @Column(nullable = false)
+    @Column(nullable = false, length = 255)
     private String vehicleDetails;
     
     @Enumerated(EnumType.STRING)
@@ -29,22 +29,39 @@ public class Driver {
     private LocalDateTime createdAt;
     
     @Column(nullable = false)
+    private LocalDateTime updatedAt;
+    
+    @Column(nullable = false)
     private boolean active = true;
     
     private Double currentLatitude;
     private Double currentLongitude;
     
+    @Column(precision = 3, scale = 2)
+    private Double rating = 0.0;
+    
+    @Column
+    private Integer totalRides = 0;
+    
     public enum DriverStatus {
         AVAILABLE, BUSY, OFFLINE
     }
     
-    // Constructors
-    public Driver() {
-        this.createdAt = LocalDateTime.now();
+    @PrePersist
+    protected void onCreate() {
+        createdAt = LocalDateTime.now();
+        updatedAt = LocalDateTime.now();
     }
     
+    @PreUpdate
+    protected void onUpdate() {
+        updatedAt = LocalDateTime.now();
+    }
+    
+    // Constructors
+    public Driver() {}
+    
     public Driver(String name, String phone, String licenseNumber, String vehicleDetails) {
-        this();
         this.name = name;
         this.phone = phone;
         this.licenseNumber = licenseNumber;
@@ -73,6 +90,9 @@ public class Driver {
     public LocalDateTime getCreatedAt() { return createdAt; }
     public void setCreatedAt(LocalDateTime createdAt) { this.createdAt = createdAt; }
     
+    public LocalDateTime getUpdatedAt() { return updatedAt; }
+    public void setUpdatedAt(LocalDateTime updatedAt) { this.updatedAt = updatedAt; }
+    
     public boolean isActive() { return active; }
     public void setActive(boolean active) { this.active = active; }
     
@@ -81,4 +101,10 @@ public class Driver {
     
     public Double getCurrentLongitude() { return currentLongitude; }
     public void setCurrentLongitude(Double currentLongitude) { this.currentLongitude = currentLongitude; }
+    
+    public Double getRating() { return rating; }
+    public void setRating(Double rating) { this.rating = rating; }
+    
+    public Integer getTotalRides() { return totalRides; }
+    public void setTotalRides(Integer totalRides) { this.totalRides = totalRides; }
 }
