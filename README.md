@@ -83,36 +83,36 @@ A comprehensive, production-ready cab booking system built with Java 21, Spring 
 ### Using Docker Compose (Recommended)
 
 1. **Clone the repository**
-   \`\`\`bash
+   ```bash
    git clone https://github.com/your-org/cabbyai.git
    cd cabbyai
-   \`\`\`
+   ```
 
 2. **Set environment variables**
-   \`\`\`bash
+   ```bash
    cp .env.example .env
    # Edit .env with your configuration
-   \`\`\`
+   ```
 
 3. **Start all services**
-   \`\`\`bash
+   ```bash
    docker-compose up -d
-   \`\`\`
+   ```
 
 4. **Verify services are running**
-   \`\`\`bash
+   ```bash
    docker-compose ps
-   \`\`\`
+   ```
 
 ### Manual Setup
 
 1. **Start MySQL**
-   \`\`\`bash
+   ```bash
    mysql -u root -p < scripts/create-databases.sql
-   \`\`\`
+   ```
 
 2. **Start services in order**
-   \`\`\`bash
+   ```bash
    # 1. Config Server
    cd config-server && mvn spring-boot:run &
    
@@ -132,14 +132,14 @@ A comprehensive, production-ready cab booking system built with Java 21, Spring 
    cd payment-service && mvn spring-boot:run &
    cd rating-service && mvn spring-boot:run &
    cd notification-service && mvn spring-boot:run &
-   \`\`\`
+   ```
 
 3. **Start Frontend**
-   \`\`\`bash
+   ```bash
    cd frontend
    npm install
    npm start
-   \`\`\`
+   ```
 
 ## 🔗 Service URLs
 
@@ -160,7 +160,7 @@ A comprehensive, production-ready cab booking system built with Java 21, Spring 
 
 All API requests (except registration and login) require JWT authentication:
 
-\`\`\`bash
+```bash
 # Login to get JWT token
 curl -X POST http://localhost:8080/api/users/login \
   -H "Content-Type: application/json" \
@@ -169,24 +169,24 @@ curl -X POST http://localhost:8080/api/users/login \
 # Use token in subsequent requests
 curl -X GET http://localhost:8080/api/users/profile/1 \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
-\`\`\`
+```
 
 ## 📊 Monitoring
 
 ### Health Checks
-\`\`\`bash
+```bash
 # Check all services health
 curl http://localhost:8080/actuator/health
 
 # Check individual service health
 curl http://localhost:8081/actuator/health
-\`\`\`
+```
 
 ### Metrics
-\`\`\`bash
+```bash
 # Prometheus metrics
 curl http://localhost:8080/actuator/prometheus
-\`\`\`
+```
 
 ### Service Discovery
 - Visit http://localhost:8761 to see registered services
@@ -194,25 +194,25 @@ curl http://localhost:8080/actuator/prometheus
 ## 🧪 Testing
 
 ### Unit Tests
-\`\`\`bash
+```bash
 # Test all services
 ./test-all.sh
 
 # Test individual service
 cd user-service && mvn test
-\`\`\`
+```
 
 ### Integration Tests
-\`\`\`bash
+```bash
 # Run integration tests
 mvn verify -Pintegration-tests
-\`\`\`
+```
 
 ### Load Testing
-\`\`\`bash
+```bash
 # Using Apache Bench
 ab -n 1000 -c 10 http://localhost:8080/api/users/profile/1
-\`\`\`
+```
 
 ## 📈 Performance
 
@@ -232,7 +232,7 @@ ab -n 1000 -c 10 http://localhost:8080/api/users/profile/1
 ## 🔧 Configuration
 
 ### Environment Variables
-\`\`\`bash
+```bash
 # Database
 MYSQL_ROOT_PASSWORD=your_password
 MYSQL_HOST=localhost
@@ -247,7 +247,7 @@ EUREKA_SERVER_URL=http://localhost:8761/eureka/
 
 # Config Server
 CONFIG_SERVER_URL=http://localhost:8888
-\`\`\`
+```
 
 ### Application Profiles
 - `dev` - Development environment
@@ -257,20 +257,19 @@ CONFIG_SERVER_URL=http://localhost:8888
 ## 🚀 Deployment
 
 ### Docker Deployment
-\`\`\`bash
+```bash
 # Build all images
 docker-compose build
 
 # Deploy to production
 docker-compose -f docker-compose.prod.yml up -d
-\`\`\`
+```
 
 ### Kubernetes Deployment
-\`\`\`bash
+```bash
 # Apply Kubernetes manifests
 kubectl apply -f k8s/
-\`\`\`
-
+```
 ### Cloud Deployment
 - AWS ECS/EKS
 - Google Cloud Run/GKE
@@ -347,7 +346,7 @@ Each service provides interactive API documentation:
 ## 🔄 CI/CD Pipeline
 
 ### GitHub Actions
-\`\`\`yaml
+```yaml
 # .github/workflows/ci.yml
 name: CI/CD Pipeline
 on: [push, pull_request]
@@ -366,40 +365,40 @@ jobs:
         run: docker-compose build
       - name: Deploy to staging
         run: ./deploy-staging.sh
-\`\`\`
+```
 
 ## 🐛 Troubleshooting
 
 ### Common Issues
 
 1. **Service Discovery Issues**
-   \`\`\`bash
+   ```bash
    # Check Eureka dashboard
    curl http://localhost:8761/eureka/apps
-   \`\`\`
+   ```
 
 2. **Database Connection Issues**
-   \`\`\`bash
+   ```bash
    # Check database connectivity
    mysql -h localhost -u root -p -e "SHOW DATABASES;"
-   \`\`\`
+   ```
 
 3. **JWT Token Issues**
-   \`\`\`bash
+   ```bash
    # Validate token
    curl -X POST http://localhost:8086/api/auth/validate-token \
      -H "Content-Type: application/json" \
      -d '{"token": "YOUR_TOKEN"}'
-   \`\`\`
-
+   ```
+   
 ### Logs
-\`\`\`bash
+```bash
 # View service logs
 docker-compose logs -f user-service
 
 # View all logs
 docker-compose logs -f
-\`\`\`
+```
 
 ## 🤝 Contributing
 
