@@ -104,6 +104,28 @@ A comprehensive, production-ready cab booking system built with Java 21, Spring 
    docker-compose ps
    ```
 
+### Continuous Delivery
+
+Every push to `main` runs build and test jobs, frontend verification, dependency and code security scans, container CVE scans, and publishes scanned images to GHCR. It then deploys the immutable SHA-tagged images to the `staging` GitHub Environment and runs an actuator health acceptance check.
+
+Production promotion is manual: run the `CI/CD` workflow with `deploy_production` enabled. Configure required reviewers on the `production` GitHub Environment and add these environment secrets:
+
+- `KUBE_CONFIG_STAGING`
+- `KUBE_CONFIG_PRODUCTION`
+- `INTEGRATION_USER_EMAIL`
+- `INTEGRATION_USER_PASSWORD`
+- `SMTP_HOST`
+- `SMTP_PORT`
+- `SMTP_USERNAME`
+- `SMTP_PASSWORD`
+- `SMTP_FROM`
+
+The production job promotes the same tested SHA image tags after staging acceptance and the Newman collection in `postman/CabbyAI.integration.postman_collection.json`. On success, the workflow emails the triggering GitHub user and repository owner using their public GitHub email, or their GitHub noreply address when no public email is available. Security, Newman, JUnit XML, and JaCoCo HTML/XML coverage reports are uploaded as downloadable workflow artifacts for every run.
+
+### Test Coverage
+
+Every Maven service runs JUnit tests with JaCoCo during `verify`. CI enforces a minimum 80% line coverage for executable business packages: service classes, gateway fallback behavior, and the notification controller. DTOs, persistence entities, repositories, exception payloads, and application bootstrap classes are reported separately but excluded from the quality gate because they do not represent business logic. Config Server and Eureka Server are bootstrap-only applications and are validated through compilation and deployment health checks.
+
 ### Manual Setup
 
 1. **Start MySQL**

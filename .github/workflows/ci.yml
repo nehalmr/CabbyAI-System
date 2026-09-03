@@ -4,18 +4,31 @@ on:
   push:
     branches: [main]
   pull_request:
+  workflow_dispatch:
+    inputs:
+      deploy_production:
+        description: Deploy the tested image set to production
+        required: true
+        default: false
+        type: boolean
+
+concurrency:
+  group: cabbyai-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 permissions:
   contents: read
-  packages: write
+  pull-requests: read
 
 env:
   REGISTRY: ghcr.io
   IMAGE_PREFIX: ${{ github.repository_owner }}/cabbyai
 
 jobs:
-  verify:
+  build:
+    name: Build and test ${{ matrix.service }}
     runs-on: ubuntu-latest
+    timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
@@ -30,10 +43,30 @@ jobs:
           distribution: temurin
           java-version: '21'
           cache: maven
-      - run: mvn -B verify
+      - name: Run JUnit tests with JaCoCo coverage
+        run: mvn -B org.jacoco:jacoco-maven-plugin:prepare-agent verify org.jacoco:jacoco-maven-plugin:report
+      - name: Publish coverage summary
+        if: always()
+        run: |
+          if [ -f target/site/jacoco/jacoco.csv ]; then
+            awk -F, 'NR > 1 {missed += $8; covered += $9} END {total = missed + covered; if (total > 0) printf "### %s JaCoCo line coverage: %.2f%%\n", "${{ matrix.service }}", (covered / total) * 100}' target/site/jacoco/jacoco.csv >> "$GITHUB_STEP_SUMMARY"
+          else
+            echo "### ${{ matrix.service }} JaCoCo line coverage: no executable test report generated" >> "$GITHUB_STEP_SUMMARY"
+          fi
+      - name: Upload JUnit and JaCoCo reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: junit-coverage-${{ matrix.service }}-${{ github.run_number }}
+          path: |
+            ${{ matrix.service }}/target/surefire-reports/
+            ${{ matrix.service }}/target/site/jacoco/
+          if-no-files-found: warn
 
   frontend:
+    name: Build frontend
     runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
@@ -46,10 +79,94 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
 
-  images:
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    needs: [verify, frontend]
+  security:
+    name: Security scans
     runs-on: ubuntu-latest
+    timeout-minutes: 20
+    permissions:
+      contents: read
+      pull-requests: read
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Review dependency changes
+        if: github.event_name == 'pull_request'
+        uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+
+      - name: Create security report directory
+        run: mkdir -p security-reports
+
+      - name: Scan dependencies, secrets, config, and CVEs
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          format: sarif
+          output: security-reports/trivy.sarif
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: 1
+
+      - name: Export global CVE report
+        if: always()
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln,secret,misconfig
+          format: json
+          output: security-reports/trivy-cve-report.json
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: 0
+
+      - name: Upload Trivy SARIF
+        if: always() && hashFiles('security-reports/trivy.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: security-reports/trivy.sarif
+          category: trivy
+
+      - name: Scan source code
+        if: always()
+        run: |
+          docker run --rm \
+            -v "$PWD:/src" \
+            semgrep/semgrep:latest \
+            semgrep scan --config auto --sarif --output /src/security-reports/semgrep.sarif /src
+
+      - name: Upload code scan SARIF
+        if: always() && hashFiles('security-reports/semgrep.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: security-reports/semgrep.sarif
+          category: semgrep
+
+      - name: Upload security reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: security-reports-${{ github.run_number }}
+          path: security-reports/
+          if-no-files-found: warn
+
+  container-build-scan-push:
+    name: Build, scan, and publish ${{ matrix.service }}
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    needs: [build, frontend, security]
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+      packages: write
+      security-events: write
+      id-token: write
     strategy:
       matrix:
         include:
@@ -75,19 +192,292 @@ jobs:
             port: 8087
     steps:
       - uses: actions/checkout@v4
-      - uses: docker/login-action@v3
-        with:
-          registry: ${{ env.REGISTRY }}
-          username: ${{ github.actor }}
-          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Buildx
+        uses: docker/setup-buildx-action@v3
+
       - uses: docker/metadata-action@v5
         id: metadata
         with:
           images: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
-          tags: type=sha
-      - uses: docker/build-push-action@v6
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=latest,enable={{is_default_branch}}
+
+      - name: Build image without publishing
+        id: build
+        uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.service }}
-          push: true
-          tags: ${{ steps.metadata.outputs.tags }}
+          load: true
+          push: false
+          tags: local/${{ matrix.service }}:${{ github.sha }}
           labels: ${{ steps.metadata.outputs.labels }}
+          cache-from: type=gha,scope=${{ matrix.service }}
+          cache-to: type=gha,mode=max,scope=${{ matrix.service }}
+
+      - name: Create image security report directory
+        run: mkdir -p security-reports
+
+      - name: Scan image for CVEs
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: local/${{ matrix.service }}:${{ github.sha }}
+          scanners: vuln,secret
+          format: sarif
+          output: security-reports/${{ matrix.service }}-image.sarif
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: 1
+
+      - name: Export image CVE report
+        if: always()
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          image-ref: local/${{ matrix.service }}:${{ github.sha }}
+          scanners: vuln,secret
+          format: json
+          output: security-reports/${{ matrix.service }}-image-cve.json
+          severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: 0
+
+      - name: Upload image SARIF
+        if: always() && hashFiles('security-reports/*-image.sarif') != ''
+        uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: security-reports/${{ matrix.service }}-image.sarif
+          category: image-${{ matrix.service }}
+
+      - name: Upload image security reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: image-security-${{ matrix.service }}-${{ github.run_number }}
+          path: security-reports/
+          if-no-files-found: warn
+
+      - name: Log in to GHCR
+        if: success()
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Publish scanned image
+        if: success()
+        env:
+          IMAGE: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
+        run: |
+          docker tag local/${{ matrix.service }}:${{ github.sha }} "$IMAGE:sha-${{ github.sha }}"
+          docker push "$IMAGE:sha-${{ github.sha }}"
+          docker tag local/${{ matrix.service }}:${{ github.sha }} "$IMAGE:latest"
+          docker push "$IMAGE:latest"
+
+      - name: Generate build provenance
+        if: success()
+        uses: actions/attest-build-provenance@v2
+        with:
+          subject-name: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}-${{ matrix.service }}
+          subject-digest: ${{ steps.build.outputs.digest }}
+          push-to-registry: true
+
+  deploy-staging:
+    name: Deploy to staging
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    needs: container-build-scan-push
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: staging
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up kubectl
+        uses: azure/setup-kubectl@v4
+
+      - name: Configure staging cluster
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG_STAGING }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/kube"
+          printf '%s' "$KUBE_CONFIG" > "$RUNNER_TEMP/kube/config"
+          echo "KUBECONFIG=$RUNNER_TEMP/kube/config" >> "$GITHUB_ENV"
+
+      - name: Apply Kubernetes resources
+        run: kubectl apply -k k8s
+
+      - name: Deploy tested images
+        env:
+          IMAGE_PREFIX: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}
+          IMAGE_TAG: sha-${{ github.sha }}
+        run: |
+          kubectl -n cabbyai set image deployment/api-gateway api-gateway="$IMAGE_PREFIX-api-gateway:$IMAGE_TAG"
+          kubectl -n cabbyai set image deployment/security-service security-service="$IMAGE_PREFIX-security-service:$IMAGE_TAG"
+          kubectl -n cabbyai set image deployment/user-service user-service="$IMAGE_PREFIX-user-service:$IMAGE_TAG"
+
+      - name: Wait for staging rollout
+        run: |
+          kubectl -n cabbyai rollout status deployment/api-gateway --timeout=5m
+          kubectl -n cabbyai rollout status deployment/security-service --timeout=5m
+          kubectl -n cabbyai rollout status deployment/user-service --timeout=5m
+
+  acceptance:
+    name: Acceptance tests
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    needs: deploy-staging
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment:
+      name: staging
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v4
+      - name: Configure staging cluster
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG_STAGING }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/kube"
+          printf '%s' "$KUBE_CONFIG" > "$RUNNER_TEMP/kube/config"
+          echo "KUBECONFIG=$RUNNER_TEMP/kube/config" >> "$GITHUB_ENV"
+      - name: Check gateway health endpoint
+        run: |
+          kubectl -n cabbyai port-forward service/api-gateway 8080:8080 > "$RUNNER_TEMP/port-forward.log" 2>&1 &
+          port_forward_pid=$!
+          trap 'kill "$port_forward_pid"' EXIT
+          timeout 30 sh -c 'until curl --fail --silent http://127.0.0.1:8080/actuator/health; do :; done'
+
+  deploy-production:
+    name: Deploy to production
+    if: github.event_name == 'workflow_dispatch' && inputs.deploy_production == true
+    needs: integration
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: production
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v4
+      - name: Configure production cluster
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG_PRODUCTION }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/kube"
+          printf '%s' "$KUBE_CONFIG" > "$RUNNER_TEMP/kube/config"
+          echo "KUBECONFIG=$RUNNER_TEMP/kube/config" >> "$GITHUB_ENV"
+      - name: Apply Kubernetes resources
+        run: kubectl apply -k k8s
+      - name: Promote tested images
+        env:
+          IMAGE_PREFIX: ${{ env.REGISTRY }}/${{ env.IMAGE_PREFIX }}
+          IMAGE_TAG: sha-${{ github.sha }}
+        run: |
+          kubectl -n cabbyai set image deployment/api-gateway api-gateway="$IMAGE_PREFIX-api-gateway:$IMAGE_TAG"
+          kubectl -n cabbyai set image deployment/security-service security-service="$IMAGE_PREFIX-security-service:$IMAGE_TAG"
+          kubectl -n cabbyai set image deployment/user-service user-service="$IMAGE_PREFIX-user-service:$IMAGE_TAG"
+      - name: Verify production rollout
+        run: |
+          kubectl -n cabbyai rollout status deployment/api-gateway --timeout=5m
+          kubectl -n cabbyai rollout status deployment/security-service --timeout=5m
+          kubectl -n cabbyai rollout status deployment/user-service --timeout=5m
+
+  integration:
+    name: Newman integration tests
+    if: (github.event_name == 'push' && github.ref == 'refs/heads/main') || github.event_name == 'workflow_dispatch'
+    needs: acceptance
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    environment:
+      name: staging
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v4
+      - uses: azure/setup-kubectl@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Configure staging cluster
+        env:
+          KUBE_CONFIG: ${{ secrets.KUBE_CONFIG_STAGING }}
+        run: |
+          mkdir -p "$RUNNER_TEMP/kube"
+          printf '%s' "$KUBE_CONFIG" > "$RUNNER_TEMP/kube/config"
+          echo "KUBECONFIG=$RUNNER_TEMP/kube/config" >> "$GITHUB_ENV"
+      - name: Run Newman collection
+        env:
+          INTEGRATION_EMAIL: ${{ secrets.INTEGRATION_USER_EMAIL }}
+          INTEGRATION_PASSWORD: ${{ secrets.INTEGRATION_USER_PASSWORD }}
+        run: |
+          kubectl -n cabbyai port-forward service/api-gateway 8080:8080 > "$RUNNER_TEMP/port-forward.log" 2>&1 &
+          port_forward_pid=$!
+          trap 'kill "$port_forward_pid"' EXIT
+          timeout 30 sh -c 'until curl --fail --silent http://127.0.0.1:8080/actuator/health; do :; done'
+          npx --yes newman@6.2.1 run postman/CabbyAI.integration.postman_collection.json \
+            --env-var "baseUrl=http://127.0.0.1:8080" \
+            --env-var "email=$INTEGRATION_EMAIL" \
+            --env-var "password=$INTEGRATION_PASSWORD" \
+            --reporters cli,junit,json \
+            --reporter-junit-export "$RUNNER_TEMP/newman-results.xml" \
+            --reporter-json-export "$RUNNER_TEMP/newman-results.json"
+      - name: Upload Newman report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: newman-integration-report-${{ github.run_number }}
+          path: |
+            ${{ runner.temp }}/newman-results.xml
+            ${{ runner.temp }}/newman-results.json
+            postman/CabbyAI.integration.postman_collection.json
+          if-no-files-found: warn
+
+  deployment-success-notification:
+    name: Notify successful production deployment
+    if: needs.deploy-production.result == 'success'
+    needs: deploy-production
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    environment:
+      name: production
+    permissions:
+      contents: read
+    steps:
+      - name: Resolve recipient addresses
+        id: recipients
+        env:
+          GH_TOKEN: ${{ github.token }}
+          ACTOR: ${{ github.actor }}
+          OWNER: ${{ github.repository_owner }}
+        run: |
+          actor_email=$(gh api "users/$ACTOR" --jq '.email // empty' || true)
+          owner_email=$(gh api "users/$OWNER" --jq '.email // empty' || true)
+          actor_email=${actor_email:-$ACTOR@users.noreply.github.com}
+          owner_email=${owner_email:-$OWNER@users.noreply.github.com}
+          echo "to=$actor_email,$owner_email" >> "$GITHUB_OUTPUT"
+      - name: Send deployment success email
+        uses: dawidd6/action-send-mail@v3
+        with:
+          server_address: ${{ secrets.SMTP_HOST }}
+          server_port: ${{ secrets.SMTP_PORT }}
+          username: ${{ secrets.SMTP_USERNAME }}
+          password: ${{ secrets.SMTP_PASSWORD }}
+          subject: CabbyAI production deployment succeeded (${{ github.sha }})
+          to: ${{ steps.recipients.outputs.to }}
+          from: ${{ secrets.SMTP_FROM }}
+          secure: true
+          body: |
+            Production deployment completed successfully.
+
+            Repository: ${{ github.repository }}
+            Commit: ${{ github.sha }}
+            Triggered by: ${{ github.actor }}
+            Workflow: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}

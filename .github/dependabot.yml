@@ -1,0 +1,80 @@
+version: 2
+updates:
+  - package-ecosystem: maven
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+  - package-ecosystem: maven
+    directory: /api-gateway
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+  - package-ecosystem: maven
+    directory: /config-server
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+  - package-ecosystem: maven
+    directory: /driver-service
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+  - package-ecosystem: maven
+    directory: /eureka-server
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+  - package-ecosystem: maven
+    directory: /notification-service
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+  - package-ecosystem: maven
+    directory: /payment-service
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+  - package-ecosystem: maven
+    directory: /rating-service
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+  - package-ecosystem: maven
+    directory: /ride-service
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+  - package-ecosystem: maven
+    directory: /security-service
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+  - package-ecosystem: maven
+    directory: /user-service
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    open-pull-requests-limit: 10

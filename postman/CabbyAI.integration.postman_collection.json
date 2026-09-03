@@ -1,0 +1,124 @@
+{
+  "info": {
+    "name": "CabbyAI Integration Tests",
+    "_postman_id": "f3f0c2f6-1d2d-4a7d-9d6d-7e4e1b0e6f01",
+    "description": "Gateway-level integration coverage for authentication and protected user APIs.",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    { "key": "baseUrl", "value": "http://127.0.0.1:8080" },
+    { "key": "email", "value": "" },
+    { "key": "password", "value": "" },
+    { "key": "token", "value": "" },
+    { "key": "userId", "value": "" }
+  ],
+  "item": [
+    {
+      "name": "Login returns a JWT",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/users/login"
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "pm.test('login succeeds', function () { pm.response.to.have.status(200); });",
+            "const body = pm.response.json();",
+            "pm.test('response contains JWT and user ID', function () { pm.expect(body.token).to.be.a('string').and.not.empty; pm.expect(body.userId).to.exist; });",
+            "pm.collectionVariables.set('token', body.token);",
+            "pm.collectionVariables.set('userId', body.userId);"
+          ],
+          "type": "text/javascript"
+        }
+      }]
+    },
+    {
+      "name": "Protected profile is accessible",
+      "request": {
+        "method": "GET",
+        "header": [{ "key": "Authorization", "value": "Bearer {{token}}" }],
+        "url": "{{baseUrl}}/api/users/profile/{{userId}}"
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "pm.test('profile succeeds with JWT', function () { pm.response.to.have.status(200); });",
+            "const body = pm.response.json();",
+            "pm.test('profile belongs to logged-in user', function () { pm.expect(String(body.userId)).to.eql(String(pm.collectionVariables.get('userId'))); });"
+          ],
+          "type": "text/javascript"
+        }
+      }]
+    },
+    {
+      "name": "Security service validates JWT",
+      "request": {
+        "method": "POST",
+        "header": [{ "key": "Content-Type", "value": "application/json" }],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"token\": \"{{token}}\"\n}"
+        },
+        "url": "{{baseUrl}}/api/auth/validate-token"
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "pm.test('token validation succeeds', function () { pm.response.to.have.status(200); });",
+            "pm.test('token is valid', function () { pm.expect(pm.response.json()).to.eql(true); });"
+          ],
+          "type": "text/javascript"
+        }
+      }]
+    },
+    {
+      "name": "Ride fare estimate accepts authenticated request",
+      "request": {
+        "method": "POST",
+        "header": [
+          { "key": "Content-Type", "value": "application/json" },
+          { "key": "Authorization", "value": "Bearer {{token}}" }
+        ],
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"pickupLocation\": \"Downtown\",\n  \"dropoffLocation\": \"Airport\"\n}"
+        },
+        "url": "{{baseUrl}}/api/rides/estimate-fare"
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "pm.test('fare estimate succeeds', function () { pm.response.to.have.status(200); });",
+            "pm.test('fare is returned', function () { pm.expect(pm.response.json().estimatedFare).to.eql(15.5); });"
+          ],
+          "type": "text/javascript"
+        }
+      }]
+    },
+    {
+      "name": "Protected profile rejects missing JWT",
+      "request": {
+        "method": "GET",
+        "url": "{{baseUrl}}/api/users/profile/{{userId}}"
+      },
+      "event": [{
+        "listen": "test",
+        "script": {
+          "exec": [
+            "pm.test('missing JWT is rejected', function () { pm.expect(pm.response.code).to.be.oneOf([401, 403]); });"
+          ],
+          "type": "text/javascript"
+        }
+      }]
+    }
+  ]
+}
