@@ -106,9 +106,9 @@ A comprehensive, production-ready cab booking system built with Java 21, Spring 
 
 ### Continuous Delivery
 
-Every push to `main` runs build and test jobs, frontend verification, dependency and code security scans, container CVE scans, and publishes scanned images to GHCR. It then deploys the immutable SHA-tagged images to the `staging` GitHub Environment and runs an actuator health acceptance check.
+Every push to `develop` or `release/*` runs build and test jobs, frontend verification, dependency and code security scans, container CVE scans, and publishes scanned images to GHCR. It then deploys the immutable SHA-tagged images to the `staging` GitHub Environment and runs actuator and Newman acceptance checks. Pull requests into `develop`, `release/*`, and `main` use the same verification gates.
 
-Production promotion is manual: run the `CI/CD` workflow with `deploy_production` enabled. Configure required reviewers on the `production` GitHub Environment and add these environment secrets:
+Production promotion is manual from a `release/*` branch: run the `CI/CD` workflow with `deploy_production` enabled. Configure required reviewers on the `production` GitHub Environment and add these environment secrets:
 
 - `KUBE_CONFIG_STAGING`
 - `KUBE_CONFIG_PRODUCTION`
@@ -121,6 +121,12 @@ Production promotion is manual: run the `CI/CD` workflow with `deploy_production
 - `SMTP_FROM`
 
 The production job promotes the same tested SHA image tags after staging acceptance and the Newman collection in `postman/CabbyAI.integration.postman_collection.json`. On success, the workflow emails the triggering GitHub user and repository owner using their public GitHub email, or their GitHub noreply address when no public email is available. Security, Newman, JUnit XML, and JaCoCo HTML/XML coverage reports are uploaded as downloadable workflow artifacts for every run.
+
+### Branch Promotion Policy
+
+- `develop` is the integration branch. Feature changes and Dependabot pull requests target `develop` and require CI plus pull-request review.
+- `release/*` is created from the latest `main` commit for a production candidate. Merge the tested `develop` changes into the release branch, run staging and Newman acceptance, and obtain production approval.
+- `main` is the protected production branch. Only reviewed pull requests from a successful release branch may merge into `main`; direct pushes and force-pushes should be disabled in the GitHub branch protection settings.
 
 ### Test Coverage
 
