@@ -1,120 +1,133 @@
 package com.cabbyai.user.service;
 
+import com.cabbyai.user.client.SecurityClient;
+import com.cabbyai.user.dto.UserLoginRequest;
+import com.cabbyai.user.dto.UserRegistrationRequest;
+import com.cabbyai.user.dto.UserResponse;
 import com.cabbyai.user.entity.User;
+import com.cabbyai.user.exception.EmailAlreadyExistsException;
+import com.cabbyai.user.exception.InvalidCredentialsException;
 import com.cabbyai.user.repository.UserRepository;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.MockitoAnnotations;
+import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
+
+import java.util.Map;
 import java.util.Optional;
+
 import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
-public class UserServiceTest {
-    
+class UserServiceTest {
     @Mock
     private UserRepository userRepository;
-    
+
+    @Mock
+    private SecurityClient securityClient;
+
     @InjectMocks
     private UserService userService;
-    
+
+    private final BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder();
+
     @BeforeEach
     void setUp() {
         MockitoAnnotations.openMocks(this);
     }
-    
+
     @Test
-    void testRegisterUser_Success() {
-        // Given
-        User user = new User("John Doe", "john@example.com", "1234567890", "password123");
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(false);
-        when(userRepository.save(any(User.class))).thenReturn(user);
-        
-        // When
-        User registeredUser = userService.registerUser(user);
-        
-        // Then
-        assertNotNull(registeredUser);
-        assertEquals("John Doe", registeredUser.getName());
-        assertTrue(registeredUser.isActive());
-        verify(userRepository).save(any(User.class));
+    void registerUserHashesPasswordAndReturnsUser() {
+        UserRegistrationRequest request = registrationRequest();
+        User savedUser = user("John Doe", "john@example.com", "+14155552671");
+        savedUser.setUserId(1L);
+        when(userRepository.existsByEmail(request.getEmail())).thenReturn(false);
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        UserResponse response = userService.registerUser(request);
+
+        assertEquals("john@example.com", response.getEmail());
+        verify(userRepository).save(argThat(saved -> saved.getPasswordHash() != null
+                && passwordEncoder.matches(request.getPassword(), saved.getPasswordHash())));
     }
-    
+
     @Test
-    void testRegisterUser_EmailExists() {
-        // Given
-        User user = new User("John Doe", "john@example.com", "1234567890", "password123");
-        when(userRepository.existsByEmail("john@example.com")).thenReturn(true);
-        
-        // When & Then
-        RuntimeException exception = assertThrows(RuntimeException.class, () -> {
-            userService.registerUser(user);
-        });
-        assertEquals("Email already exists", exception.getMessage());
+    void registerUserRejectsExistingEmail() {
+        UserRegistrationRequest request = registrationRequest();
+        when(userRepository.existsByEmail(request.getEmail())).thenReturn(true);
+
+        assertThrows(EmailAlreadyExistsException.class, () -> userService.registerUser(request));
         verify(userRepository, never()).save(any(User.class));
     }
-    
+
     @Test
-    void testLoginUser_Success() {
-        // Given
-        User user = new User("John Doe", "john@example.com", "1234567890", "password123");
-        user.setPasswordHash("$2a$10$N.zmdr9k7uOCQb376NoUnuTJ8iYqiSfFe5ldcR7f6XMO0UQ3j4WJa"); // hashed "password123"
-        when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.of(user));
-        
-        // When
-        Optional<User> loggedInUser = userService.loginUser("john@example.com", "password123");
-        
-        // Then
-        assertTrue(loggedInUser.isPresent());
-        assertEquals("John Doe", loggedInUser.get().getName());
+    void loginUserReturnsTokenForValidCredentials() {
+        User user = user("John Doe", "john@example.com", "+14155552671");
+        user.setUserId(1L);
+        user.setPasswordHash(passwordEncoder.encode("Password123"));
+        UserLoginRequest request = new UserLoginRequest();
+        request.setEmail(user.getEmail());
+        request.setPassword("Password123");
+        when(userRepository.findActiveUserByEmail(user.getEmail())).thenReturn(Optional.of(user));
+        when(securityClient.generateToken(any())).thenReturn(Map.of("token", "signed-token"));
+
+        UserResponse response = userService.loginUser(request);
+
+        assertEquals("signed-token", response.getToken());
+        verify(securityClient).generateToken(any());
     }
-    
+
     @Test
-    void testLoginUser_InvalidCredentials() {
-        // Given
-        when(userRepository.findByEmail("john@example.com")).thenReturn(Optional.empty());
-        
-        // When
-        Optional<User> loggedInUser = userService.loginUser("john@example.com", "wrongpassword");
-        
-        // Then
-        assertFalse(loggedInUser.isPresent());
+    void loginUserRejectsInvalidCredentials() {
+        UserLoginRequest request = new UserLoginRequest();
+        request.setEmail("john@example.com");
+        request.setPassword("wrong");
+        when(userRepository.findActiveUserByEmail(request.getEmail())).thenReturn(Optional.empty());
+
+        assertThrows(InvalidCredentialsException.class, () -> userService.loginUser(request));
+        verifyNoInteractions(securityClient);
     }
-    
+
     @Test
-    void testUpdateUser_Success() {
-        // Given
-        Long userId = 1L;
-        User existingUser = new User("John Doe", "john@example.com", "1234567890", "password123");
-        User updatedDetails = new User("John Smith", "john@example.com", "9876543210", "password123");
-        
-        when(userRepository.findByUserIdAndActiveTrue(userId)).thenReturn(Optional.of(existingUser));
-        when(userRepository.save(any(User.class))).thenReturn(existingUser);
-        
-        // When
-        User updatedUser = userService.updateUser(userId, updatedDetails);
-        
-        // Then
-        assertEquals("John Smith", updatedUser.getName());
-        assertEquals("9876543210", updatedUser.getPhone());
+    void updateUserUpdatesProfile() {
+        User existingUser = user("John Doe", "john@example.com", "+14155552671");
+        UserRegistrationRequest request = registrationRequest();
+        request.setName("John Smith");
+        request.setPhone("+14155552672");
+        when(userRepository.findByUserIdAndActiveTrue(1L)).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(existingUser)).thenReturn(existingUser);
+
+        UserResponse response = userService.updateUser(1L, request);
+
+        assertEquals("John Smith", response.getName());
+        assertEquals("+14155552672", response.getPhone());
         verify(userRepository).save(existingUser);
     }
-    
+
     @Test
-    void testDeactivateUser_Success() {
-        // Given
-        Long userId = 1L;
-        User user = new User("John Doe", "john@example.com", "1234567890", "password123");
-        when(userRepository.findById(userId)).thenReturn(Optional.of(user));
-        when(userRepository.save(any(User.class))).thenReturn(user);
-        
-        // When
-        userService.deactivateUser(userId);
-        
-        // Then
+    void deactivateUserMarksAccountInactive() {
+        User user = user("John Doe", "john@example.com", "+14155552671");
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+
+        userService.deactivateUser(1L);
+
         assertFalse(user.isActive());
         verify(userRepository).save(user);
+    }
+
+    private UserRegistrationRequest registrationRequest() {
+        UserRegistrationRequest request = new UserRegistrationRequest();
+        request.setName("John Doe");
+        request.setEmail("john@example.com");
+        request.setPhone("+14155552671");
+        request.setPassword("Password123");
+        return request;
+    }
+
+    private User user(String name, String email, String phone) {
+        return new User(name, email, phone, "Password123");
     }
 }

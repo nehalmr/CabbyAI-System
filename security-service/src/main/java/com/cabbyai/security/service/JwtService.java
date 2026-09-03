@@ -53,7 +53,7 @@ public class JwtService {
     
     public Boolean validateToken(String token) {
         try {
-            Jwts.parserBuilder().setSigningKey(getSigningKey()).build().parseClaimsJws(token);
+            Jwts.parser().verifyWith((javax.crypto.SecretKey) getSigningKey()).build().parseSignedClaims(token);
             logger.debug("JWT token validation successful");
             return true;
         } catch (ExpiredJwtException e) {
@@ -72,11 +72,11 @@ public class JwtService {
     }
     
     public Claims extractAllClaims(String token) {
-        return Jwts.parserBuilder()
-                .setSigningKey(getSigningKey())
-                .build()
-                .parseClaimsJws(token)
-                .getBody();
+        return Jwts.parser()
+            .verifyWith((javax.crypto.SecretKey) getSigningKey())
+            .build()
+            .parseSignedClaims(token)
+            .getPayload();
     }
     
     public String extractEmail(String token) {
