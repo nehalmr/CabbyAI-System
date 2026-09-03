@@ -10,6 +10,7 @@ node_modules/
 out/
 .npm/
 .pnpm-store/
+next-env.d.ts
 
 # Environment and secrets
 .env
