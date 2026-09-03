@@ -1,0 +1,32 @@
+# Java and Maven
+**/target/
+*.class
+*.jar
+*.war
+
+# Node and Next.js
+node_modules/
+.next/
+out/
+.npm/
+.pnpm-store/
+
+# Environment and secrets
+.env
+.env.*
+!.env.example
+
+# Logs
+*.log
+logs/
+
+# IDE and OS files
+.idea/
+.vscode/*
+!.vscode/extensions.json
+!.vscode/settings.json
+.DS_Store
+
+# Test and coverage output
+coverage/
+jacoco.exec
