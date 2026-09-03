@@ -110,6 +110,17 @@ jobs:
           output: security-reports/trivy.sarif
           severity: UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL
           ignore-unfixed: false
+          exit-code: 0
+
+      - name: Block fixed high and critical CVEs
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
           exit-code: 1
 
       - name: Export global CVE report
