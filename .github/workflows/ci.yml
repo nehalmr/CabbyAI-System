@@ -91,6 +91,23 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set up Java and restore Maven cache
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+          cache-dependency-path: '**/pom.xml'
+
+      - name: Warm Maven dependency cache
+        shell: bash
+        run: |
+          set -euo pipefail
+          for pom in pom.xml */pom.xml; do
+            [ -f "$pom" ] || continue
+            mvn -B -q -f "$pom" dependency:go-offline
+          done
+
       - name: Review dependency changes
         if: github.event_name == 'pull_request'
         uses: actions/dependency-review-action@v4
