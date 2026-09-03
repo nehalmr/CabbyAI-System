@@ -102,7 +102,7 @@ jobs:
         run: mkdir -p security-reports
 
       - name: Scan dependencies, secrets, config, and CVEs
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -115,7 +115,7 @@ jobs:
 
       - name: Export global CVE report
         if: always()
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
@@ -220,7 +220,7 @@ jobs:
         run: mkdir -p security-reports
 
       - name: Scan image for CVEs
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: local/${{ matrix.service }}:${{ github.sha }}
           scanners: vuln,secret
@@ -232,7 +232,7 @@ jobs:
 
       - name: Export image CVE report
         if: always()
-        uses: aquasecurity/trivy-action@0.28.0
+        uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: local/${{ matrix.service }}:${{ github.sha }}
           scanners: vuln,secret
