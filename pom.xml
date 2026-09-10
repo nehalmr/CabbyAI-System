@@ -26,9 +26,15 @@
         <httpclient5.version>5.4.3</httpclient5.version>
         <httpcore5-h2.version>5.4.3</httpcore5-h2.version>
         <spring-data.version>3.5.12</spring-data.version>
+        <spring-cloud-config.version>4.3.3</spring-cloud-config.version>
     </properties>
     <dependencyManagement>
         <dependencies>
+            <dependency>
+                <groupId>org.springframework.cloud</groupId>
+                <artifactId>spring-cloud-config-server</artifactId>
+                <version>${spring-cloud-config.version}</version>
+            </dependency>
             <dependency>
                 <groupId>org.apache.tomcat.embed</groupId>
                 <artifactId>tomcat-embed-core</artifactId>
