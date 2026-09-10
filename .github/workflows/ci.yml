@@ -105,7 +105,7 @@ jobs:
           set -euo pipefail
           for pom in pom.xml */pom.xml; do
             [ -f "$pom" ] || continue
-            mvn -B -q -f "$pom" dependency:go-offline
+            mvn -B -q -f "$pom" dependency:resolve
           done
 
       - name: Review dependency changes
