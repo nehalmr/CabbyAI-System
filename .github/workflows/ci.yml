@@ -130,6 +130,18 @@ jobs:
           exit-code: 0
           version: v0.74.0
 
+      - name: Scan dependencies for CVEs (Diagnostic)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: .
+          scanners: vuln
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: true
+          exit-code: 0
+          version: v0.74.0
+
       - name: Block fixed high and critical CVEs
         uses: aquasecurity/trivy-action@v0.36.0
         with:
@@ -250,7 +262,18 @@ jobs:
       - name: Create image security report directory
         run: mkdir -p security-reports
 
-      - name: Scan image for CVEs
+      - name: Scan image for CVEs (Diagnostic)
+        uses: aquasecurity/trivy-action@v0.36.0
+        with:
+          image-ref: local/${{ matrix.service }}:${{ github.sha }}
+          scanners: vuln
+          format: table
+          severity: HIGH,CRITICAL
+          ignore-unfixed: false
+          exit-code: 0
+          version: v0.74.0
+
+      - name: Scan image for CVEs (Blocking)
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           image-ref: local/${{ matrix.service }}:${{ github.sha }}
