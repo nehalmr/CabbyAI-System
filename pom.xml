@@ -11,24 +11,59 @@
     <groupId>com.cabbyai</groupId>
     <artifactId>cabbyai-backend</artifactId>
     <version>0.0.1-SNAPSHOT</version>
+    <packaging>pom</packaging>
     <name>cabbyai-backend</name>
-    <description>CabbyAI Cab Booking System Backend</description>
+    <description>CabbyAI Cab Booking System Backend - Parent POM</description>
     <properties>
         <java.version>21</java.version>
-        <tomcat.version>10.1.55</tomcat.version>
+        <tomcat.version>10.1.58</tomcat.version>
         <spring-framework.version>6.2.19</spring-framework.version>
         <jackson-bom.version>2.21.4</jackson-bom.version>
         <micrometer.version>1.15.12</micrometer.version>
-        <netty.version>4.1.136.Final</netty.version>
+        <netty.version>4.1.137.Final</netty.version>
         <xstream.version>1.4.21</xstream.version>
         <commons-fileupload.version>1.6.0</commons-fileupload.version>
         <httpclient5.version>5.4.3</httpclient5.version>
+        <spring-data.version>3.5.12</spring-data.version>
     </properties>
+    <dependencyManagement>
+        <dependencies>
+            <dependency>
+                <groupId>org.apache.tomcat.embed</groupId>
+                <artifactId>tomcat-embed-core</artifactId>
+                <version>${tomcat.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-handler</artifactId>
+                <version>${netty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents.core5</groupId>
+                <artifactId>httpcore5</artifactId>
+                <version>${httpclient5.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.springframework.data</groupId>
+                <artifactId>spring-data-commons</artifactId>
+                <version>${spring-data.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>commons-fileupload</groupId>
+                <artifactId>commons-fileupload</artifactId>
+                <version>${commons-fileupload.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.bouncycastle</groupId>
+                <artifactId>bcprov-jdk18on</artifactId>
+                <version>1.80.2</version>
+            </dependency>
+        </dependencies>
+    </dependencyManagement>
     <dependencies>
         <dependency>
             <groupId>org.bouncycastle</groupId>
             <artifactId>bcprov-jdk18on</artifactId>
-            <version>1.80.2</version>
         </dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
