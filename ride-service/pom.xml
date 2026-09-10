@@ -5,7 +5,7 @@
     <parent>
         <groupId>org.springframework.boot</groupId>
         <artifactId>spring-boot-starter-parent</artifactId>
-        <version>3.2.0</version>
+        <version>3.5.14</version>
         <relativePath/>
     </parent>
     <groupId>com.cabbyai</groupId>
@@ -15,9 +15,11 @@
     <description>Ride Management Microservice for CabbyAI</description>
     <properties>
         <java.version>21</java.version>
-        <spring-cloud.version>2023.0.0</spring-cloud.version>
+        <spring-cloud.version>2025.0.1</spring-cloud.version>
+        <tomcat.version>10.1.55</tomcat.version><spring-framework.version>6.2.19</spring-framework.version><jackson-bom.version>2.21.4</jackson-bom.version><micrometer.version>1.15.12</micrometer.version><netty.version>4.1.136.Final</netty.version><httpclient5.version>5.4.3</httpclient5.version>
     </properties>
     <dependencies>
+        <dependency><groupId>org.bouncycastle</groupId><artifactId>bcprov-jdk18on</artifactId><version>1.80.2</version></dependency>
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-web</artifactId>
