@@ -7,10 +7,9 @@ RUN mvn -B -DskipTests dependency:go-offline
 COPY ride-service/src src
 RUN mvn -B -DskipTests package
 
-FROM eclipse-temurin:21-jre-jammy
+FROM gcr.io/distroless/java21-debian12
 WORKDIR /app
-RUN apt-get update && apt-get upgrade -y && apt-get install -y --no-install-recommends curl && rm -rf /var/lib/apt/lists/* && useradd --system --uid 1001 spring
 COPY --from=build /workspace/ride-service/target/*.jar app.jar
-USER 1001
+USER nonroot
 EXPOSE 8083
 ENTRYPOINT ["java", "-jar", "app.jar"]
