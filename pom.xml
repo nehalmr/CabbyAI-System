@@ -24,6 +24,7 @@
         <xstream.version>1.4.21</xstream.version>
         <commons-fileupload.version>1.6.0</commons-fileupload.version>
         <httpclient5.version>5.4.3</httpclient5.version>
+        <httpcore5-h2.version>5.4.3</httpcore5-h2.version>
         <spring-data.version>3.5.12</spring-data.version>
     </properties>
     <dependencyManagement>
@@ -37,6 +38,11 @@
                 <groupId>io.netty</groupId>
                 <artifactId>netty-handler</artifactId>
                 <version>${netty.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>org.apache.httpcomponents.core5</groupId>
+                <artifactId>httpcore5-h2</artifactId>
+                <version>${httpcore5-h2.version}</version>
             </dependency>
             <dependency>
                 <groupId>org.apache.httpcomponents.core5</groupId>
