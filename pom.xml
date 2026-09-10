@@ -28,7 +28,7 @@
         <spring-data.version>3.5.12</spring-data.version>
         <spring-cloud-config.version>4.3.3</spring-cloud-config.version>
         <snakeyaml.version>2.2</snakeyaml.version>
-        <jackson-databind.version>2.18.2</jackson-databind.version>
+        <jackson-databind.version>2.21.4</jackson-databind.version>
     </properties>
     <dependencyManagement>
         <dependencies>
