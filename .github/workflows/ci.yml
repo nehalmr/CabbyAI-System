@@ -238,7 +238,8 @@ jobs:
         id: build
         uses: docker/build-push-action@v6
         with:
-          context: ${{ matrix.service }}
+          context: .
+          file: ${{ matrix.service }}/Dockerfile
           load: true
           push: false
           tags: local/${{ matrix.service }}:${{ github.sha }}
