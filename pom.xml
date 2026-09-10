@@ -27,6 +27,8 @@
         <httpcore5-h2.version>5.4.3</httpcore5-h2.version>
         <spring-data.version>3.5.12</spring-data.version>
         <spring-cloud-config.version>4.3.3</spring-cloud-config.version>
+        <snakeyaml.version>2.2</snakeyaml.version>
+        <jackson-databind.version>2.18.2</jackson-databind.version>
     </properties>
     <dependencyManagement>
         <dependencies>
@@ -69,6 +71,21 @@
                 <groupId>org.bouncycastle</groupId>
                 <artifactId>bcprov-jdk18on</artifactId>
                 <version>1.80.2</version>
+            </dependency>
+            <dependency>
+                <groupId>org.yaml</groupId>
+                <artifactId>snakeyaml</artifactId>
+                <version>${snakeyaml.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson-databind.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>io.netty</groupId>
+                <artifactId>netty-all</artifactId>
+                <version>${netty.version}</version>
             </dependency>
         </dependencies>
     </dependencyManagement>
