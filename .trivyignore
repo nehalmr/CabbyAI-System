@@ -1,0 +1,12 @@
+# zlib: Critical - No fix available for Debian 12
+CVE-2023-45853
+# libexpat: High - No fix available or deferred
+CVE-2025-59375
+CVE-2026-25210
+CVE-2026-45186
+# libuuid1/util-linux: High - No fix available
+CVE-2026-53613
+CVE-2026-76642
+CVE-2026-78408
+CVE-2026-78409
+CVE-2026-78410
