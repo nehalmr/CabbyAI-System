@@ -4,6 +4,9 @@ CVE-2023-45853
 CVE-2025-59375
 CVE-2026-25210
 CVE-2026-45186
+CVE-2026-76957
+# liblcms2: High - No fix available in base image
+CVE-2026-41254
 # libuuid1/util-linux: High - No fix available
 CVE-2026-53613
 CVE-2026-76642
