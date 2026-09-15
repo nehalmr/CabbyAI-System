@@ -13,9 +13,6 @@
     <version>0.0.1-SNAPSHOT</version>
     <name>driver-service</name>
     <description>Driver Management Microservice for CabbyAI</description>
-    <properties>
-        <spring-cloud.version>2025.1.3</spring-cloud.version>
-    </properties>
     <dependencies>
         <dependency><groupId>org.bouncycastle</groupId><artifactId>bcprov-jdk18on</artifactId></dependency>
         <dependency>
@@ -61,17 +58,6 @@
             <scope>test</scope>
         </dependency>
     </dependencies>
-    <dependencyManagement>
-        <dependencies>
-            <dependency>
-                <groupId>org.springframework.cloud</groupId>
-                <artifactId>spring-cloud-dependencies</artifactId>
-                <version>${spring-cloud.version}</version>
-                <type>pom</type>
-                <scope>import</scope>
-            </dependency>
-        </dependencies>
-    </dependencyManagement>
     <build>
         <plugins>
             <plugin>
