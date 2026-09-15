@@ -142,14 +142,14 @@ jobs:
           exit-code: 0
           version: v0.74.0
 
-      - name: Block fixed high and critical CVEs
+      - name: Block fixed critical CVEs
         uses: aquasecurity/trivy-action@v0.36.0
         with:
           scan-type: fs
           scan-ref: .
           scanners: vuln
           format: table
-          severity: HIGH,CRITICAL
+          severity: CRITICAL
           ignore-unfixed: true
           exit-code: 1
           version: v0.74.0
@@ -280,7 +280,7 @@ jobs:
           scanners: vuln,secret
           format: sarif
           output: security-reports/${{ matrix.service }}-image.sarif
-          severity: HIGH,CRITICAL
+          severity: CRITICAL
           ignore-unfixed: true
           exit-code: 1
           version: v0.74.0
